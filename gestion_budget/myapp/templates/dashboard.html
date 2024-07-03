@@ -1,0 +1,171 @@
+<!-- dashboard.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .expense {
+            background-color: #f8d7da !important;
+        }
+        .income {
+            background-color: #d4edda !important;
+        }
+        .chart-container {
+            height: 300px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
+        <a class="navbar-brand" href="#">Dashboard</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'add_transaction' %}">Add Transaction</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'download_excel_report' %}">Download Excel</a>  <!-- Correct URL name -->
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'download_pdf_report' %}">Download PDF</a>
+                </li>
+            </ul>
+            <form class="form-inline my-2 my-lg-0" action="{% url 'reset_transactions' %}" method="post">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger my-2 my-sm-0 mr-2" type="submit">Reset All Transactions</button>
+            </form>
+            <form class="form-inline my-2 my-lg-0" action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger my-2 my-sm-0" type="submit">Logout</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="container mt-3">
+        <div class="row mb-3">
+            <div class="col-sm-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Balance</h5>
+                        <p class="card-text">${{ balance }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card income">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Income</h5>
+                        <p class="card-text">${{ total_income }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card expense">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Expenses</h5>
+                        <p class="card-text">${{ total_expenses }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card">
+            <!--  -->
+            </div>
+        </div>
+
+        <h4>Transactions:</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr class="{% if transaction.transaction_type == 'expense' %}expense{% elif transaction.transaction_type == 'income' %}income{% endif %}">
+                    <td>{{ transaction.timestamp }}</td>
+                    <td>{{ transaction.description }}</td>
+                    <td>${{ transaction.amount }}</td>
+                    <td>{{ transaction.get_transaction_type_display }}</td>
+                    <td>
+                        <a href="{% url 'edit_transaction' transaction.id %}" class="btn btn-sm btn-primary">Edit</a>
+                        <a href="{% url 'delete_transaction' transaction.id %}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <canvas id="combinedChart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var combinedCtx = document.getElementById('combinedChart').getContext('2d');
+        var barCtx = document.getElementById('barChart').getContext('2d');
+
+        var combinedChart = new Chart(combinedCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Total Income', 'Total Expenses'],
+                datasets: [{
+                    label: 'Income vs Expenses',
+                    data: [{{ total_income }}, {{ total_expenses }}],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 99, 132, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        var barChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Balance', 'Total Income', 'Total Expenses'],
+                datasets: [{
+                    label: 'Financial Overview',
+                    data: [{{ balance }}, {{ total_income }}, {{ total_expenses }}],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 99, 132, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+    </script>
+</body>
+</html>
